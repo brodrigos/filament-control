@@ -1,94 +1,82 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Filament3D — Gerenciador de Filamento 3D</title>
-  <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <title>Filament3D — Controle de Consumo de Filamento 3D</title>
+  <link rel="stylesheet" href="https://raw.githubusercontent.com/brodrigos/litellm-radar/main/dashboard/assets/css/dashboard.css">
+  <link rel="stylesheet" href="https://raw.githubusercontent.com/brodrigos/litellm-radar/main/av1-encoder/tool.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .fil-body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, sans-serif; padding: 32px; }
+    .fil-hero { max-width: 860px; margin: 0 auto 36px; }
+    .fil-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .fil-mark { width: 36px; height: 36px; border-radius: var(--radius); background: linear-gradient(135deg, #4f46e5, #818cf8); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 16px; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15); }
+    .fil-brand strong { font-size: 22px; letter-spacing: -0.03em; }
+    .fil-brand span { color: var(--dim); font-size: 13px; }
+    .fil-intro { color: var(--muted); line-height: 1.65; margin-bottom: 28px; max-width: 720px; }
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen">
-  <div class="max-w-6xl mx-auto px-6 py-12">
-    <!-- Hero -->
-    <section class="text-center mb-14">
-      <div class="inline-flex items-center gap-2 bg-indigo-900/40 border border-indigo-700/60 text-indigo-300 px-4 py-1.5 rounded-full text-sm font-medium mb-6">
-        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-        Klipper / Moonraker Integration — USD Tracking
+<body class="fil-body">
+  <header class="shell-head">
+    <div class="shell-brand">
+      <span class="shell-mark">🧊</span>
+      <div class="shell-title">
+        <strong>Filament3D</strong>
+        <span>Klipper · Moonraker · consumo em USD</span>
       </div>
-      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-white mb-5">
-        Filament<span class="text-indigo-400">3D</span>
-      </h1>
-      <p class="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-        Monitoramento em tempo real do consumo de filamento da sua impressora 3D rodando <strong>Klipper</strong> (ex: 192.168.1.101:85). Cálculo automático em <strong>USD ($)</strong>, gerenciamento de bobinas e débito automático em impressões concluídas ou canceladas.
+    </div>
+    <div class="shell-meta">
+      <a href="https://github.com/brodrigos/filament-control" class="shell-chip">github</a>
+      <span class="shell-chip" data-state="online">v1.0</span>
+    </div>
+  </header>
+
+  <main class="shell-main">
+    <section class="fil-hero">
+      <div class="fil-brand">
+        <div class="fil-mark">3D</div>
+        <div>
+          <strong>Filament3D</strong>
+          <span>Controle de Consumo de Filamento</span>
+        </div>
+      </div>
+      <p class="muted fil-intro">
+        Monitoramento em tempo real para impressoras rodando <strong>Klipper + Moonraker</strong> (ex: 192.168.1.101:85). 
+        Registra automaticamente o consumo de filamento ao detectar impressões <strong>concluídas</strong> ou <strong>canceladas</strong>, 
+        calcula custo proporcional em <strong>USD ($)</strong> e gerencia múltiplas bobinas com histórico persistente.
       </p>
-      <div class="mt-8 flex gap-4 justify-center">
-        <a href="https://github.com/brodrigos/filament-control" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-indigo-900/20 transition">Ver no GitHub</a>
-        <a href="#install" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-semibold px-6 py-3 rounded-xl transition">Instalar no Linux</a>
-      </div>
-    </section>
 
-    <!-- Features -->
-    <section class="grid md:grid-cols-3 gap-6 mb-16">
-      <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-7 hover:border-indigo-500/30 transition shadow-sm">
-        <div class="w-12 h-12 bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-400 text-xl mb-4"><i class="fa-solid fa-signal"></i></div>
-        <h3 class="text-lg font-bold text-white mb-2">Monitoramento em Tempo Real</h3>
-        <p class="text-slate-400 text-sm leading-relaxed">Conexão direta com o Moonraker (IP:Port) para ler o estado atual da impressora, arquivo em execução, progresso e filamento usado no job.</p>
-      </div>
-      <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-7 hover:border-indigo-500/30 transition shadow-sm">
-        <div class="w-12 h-12 bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-400 text-xl mb-4"><i class="fa-solid fa-dollar-sign"></i></div>
-        <h3 class="text-lg font-bold text-white mb-2">Cálculo em USD ($)</h3>
-        <p class="text-slate-400 text-sm leading-relaxed">Cada bobina cadastra preço de compra em USD. O sistema calcula automaticamente o custo proporcional de cada impressão com base no peso líquido.</p>
-      </div>
-      <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-7 hover:border-indigo-500/30 transition shadow-sm">
-        <div class="w-12 h-12 bg-rose-900/30 rounded-xl flex items-center justify-center text-rose-400 text-xl mb-4"><i class="fa-solid fa-plug-circle-xmark"></i></div>
-        <h3 class="text-lg font-bold text-white mb-2">Débito Automático</h3>
-        <p class="text-slate-400 text-sm leading-relaxed">Ao detectar mudança de estado (printing → complete / cancelled), o sistema debita automaticamente o filamento consumido no rolo ativo.</p>
-      </div>
-    </section>
-
-    <!-- Demo / Screenshot -->
-    <section class="bg-gradient-to-br from-slate-800 to-slate-900/80 border border-slate-700 rounded-3xl p-8 md:p-12 mb-16 shadow-2xl shadow-indigo-950/10 relative overflow-hidden">
-      <div class="absolute -top-20 -right-20 w-72 h-72 bg-indigo-600/20 rounded-full blur-3xl"></div>
-      <h2 class="text-2xl md:text-3xl font-extrabold text-white mb-3">Dashboard Interativo</h2>
-      <p class="text-slate-400 max-w-xl mb-8">Visualização em tempo real dos rolos ativos, histórico completo de consumo, resumo financeiro e controle de bobinas — tudo integrado ao seu servidor de impressão.</p>
-
-      <div class="grid md:grid-cols-3 gap-4">
-        <div class="bg-slate-950/60 border border-slate-700 rounded-xl p-4">
-          <p class="text-xs uppercase text-slate-500 font-bold mb-1">Estado</p>
-          <p class="text-white font-bold">Printing — 16.9%</p>
-          <p class="text-xs text-slate-400">90x90x04mm_PLA.gcode</p>
+      <h3 class="section-title">Recursos</h3>
+      <div class="stat-grid">
+        <div class="stat-tile">
+          <span class="stat-value">Tempo Real</span>
+          <span class="stat-label">Estado e progresso direto do Moonraker</span>
         </div>
-        <div class="bg-slate-950/60 border border-slate-700 rounded-xl p-4">
-          <p class="text-xs uppercase text-slate-500 font-bold mb-1">Filamento Usado</p>
-          <p class="text-indigo-400 font-extrabold text-xl">1.57 m</p>
-          <p class="text-xs text-slate-400">~39.2 g (PLA 1.75mm)</p>
+        <div class="stat-tile">
+          <span class="stat-value">USD ($)</span>
+          <span class="stat-label">Cálculo de custo por grama com base no peso líquido</span>
         </div>
-        <div class="bg-slate-950/60 border border-slate-700 rounded-xl p-4">
-          <p class="text-xs uppercase text-slate-500 font-bold mb-1">Bobina Ativa</p>
-          <p class="text-white font-bold">PLA Branco Genérico</p>
-          <div class="w-full bg-slate-700 rounded-full h-2 mt-2"><div class="bg-indigo-500 h-2 rounded-full" style="width: 96%"></div></div>
-          <p class="text-xs text-emerald-400 mt-1">~$3.92 consumido</p>
+        <div class="stat-tile">
+          <span class="stat-value">Auto Debit</span>
+          <span class="stat-label">Débito automático ao detectar complete / cancelled</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-value">Spools</span>
+          <span class="stat-label">Cadastro, ativação e histórico por bobina</span>
         </div>
       </div>
-    </section>
 
-    <!-- Install -->
-    <section id="install" class="bg-slate-900 border border-slate-700 rounded-3xl p-8 md:p-10 shadow-xl mb-16">
-      <h2 class="text-2xl font-extrabold text-white mb-2">Instalação no Linux</h2>
-      <p class="text-slate-400 mb-6">Copie o repositório para o host da impressora e execute o script automático.</p>
-      <div class="bg-black rounded-xl p-5 font-mono text-sm text-green-300 overflow-x-auto shadow-inner">
-        <pre>git clone https://github.com/brodrigos/filament-control.git
+      <h3 class="section-title">Instalação no Linux</h3>
+      <div class="av1-details open">
+        <summary>Ver comando de instalação automática</summary>
+        <pre style="margin-top: 8px; color: var(--text); background: var(--surface-2); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); overflow-x: auto; font-size: 0.82rem;">git clone https://github.com/brodrigos/filament-control.git
 cd filament-control
 chmod +x install-script.sh
 bash install-script.sh</pre>
       </div>
-      <p class="text-xs text-slate-500 mt-3">Cria o serviço <code>filament-control</code> com Systemd, reinicia automaticamente e monitora o Moonraker na porta 3030.</p>
+      <p class="muted" style="font-size: 0.78rem; margin-top: 6px;">O script cria o serviço Systemd <code>filament-control</code>, reinicia automaticamente e monitora o Moonraker na porta 3030.</p>
     </section>
-
-    <!-- Footer -->
-    <footer class="text-center text-slate-500 text-sm pb-8">
-      <p>Filament3D — Open Source app for Klipper / Moonraker printers · <a href="https://github.com/brodrigos/filament-control" class="text-indigo-400 hover:underline">github.com/brodrigos/filament-control</a></p>
-    </footer>
-  </div>
+  </main>
 </body>
 </html>
