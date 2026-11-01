@@ -1,0 +1,52 @@
+{
+  "spools": [
+    {
+      "id": "1793567359052",
+      "name": "PLA",
+      "material": "PLA",
+      "color": "#3b82f6",
+      "initialWeightGrams": 250,
+      "emptySpoolWeightGrams": 30,
+      "currentWeightGrams": 127.49827596272348,
+      "densityGcm3": 1.24,
+      "diameterMm": 1.75,
+      "cost": 3.5,
+      "notes": "",
+      "createdAt": "2026-11-01T21:09:19.052Z"
+    }
+  ],
+  "activeSpoolId": "1793567359052",
+  "history": [
+    {
+      "id": "1793572211747",
+      "spoolId": "1793567359052",
+      "printName": "simulate",
+      "filamentUsedMeters": 0,
+      "filamentUsedGrams": 120,
+      "cost": 1.91,
+      "timestamp": "2026-11-01T22:30:11.747Z"
+    },
+    {
+      "id": "1793572135744",
+      "spoolId": "1793567359052",
+      "printName": "Lower Manhattan + Towers Test._PLA_1h27m.gcode (Cancelado)",
+      "filamentUsedMeters": 0.84,
+      "filamentUsedGrams": 2.5,
+      "cost": 0.04,
+      "timestamp": "2026-11-01T22:28:55.744Z"
+    },
+    {
+      "id": "h1",
+      "spoolId": "1",
+      "printName": "Suporte de Mesa.gcode",
+      "filamentUsedMeters": 14.5,
+      "filamentUsedGrams": 43.5,
+      "cost": 3.92,
+      "timestamp": "2026-11-01T10:30:00.000Z"
+    }
+  ],
+  "settings": {
+    "printerUrl": "http://192.168.1.101:85",
+    "lowFilamentThresholdGrams": 100
+  }
+}
