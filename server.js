@@ -277,8 +277,15 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // Serve arquivos estáticos (index.html físico com Tailwind, etc.)
-    const staticPath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname.slice(1));
+    // Frontend HTML - aplicação funcional completa (Dashboard, Bobinas, Histórico)
+    if (pathname === '/' || pathname === '/index.html') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(getHTMLContent());
+        return;
+    }
+
+    // Serve arquivos estáticos CSS/JS se solicitados diretamente
+    const staticPath = path.join(__dirname, pathname.slice(1));
     if (fs.existsSync(staticPath) && fs.statSync(staticPath).isFile()) {
         const ext = path.extname(staticPath).toLowerCase();
         const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8' };
