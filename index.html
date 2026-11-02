@@ -4,20 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Filament3D — Controle de Consumo de Filamento 3D</title>
-  <link rel="stylesheet" href="https://raw.githubusercontent.com/brodrigos/litellm-radar/main/dashboard/assets/css/dashboard.css">
-  <link rel="stylesheet" href="https://raw.githubusercontent.com/brodrigos/litellm-radar/main/av1-encoder/tool.css">
+  <link rel="stylesheet" href="shell.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    .fil-body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, sans-serif; padding: 32px; }
-    .fil-hero { max-width: 860px; margin: 0 auto 36px; }
-    .fil-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .fil-mark { width: 36px; height: 36px; border-radius: var(--radius); background: linear-gradient(135deg, #4f46e5, #818cf8); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 16px; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15); }
-    .fil-brand strong { font-size: 22px; letter-spacing: -0.03em; }
-    .fil-brand span { color: var(--dim); font-size: 13px; }
-    .fil-intro { color: var(--muted); line-height: 1.65; margin-bottom: 28px; max-width: 720px; }
-  </style>
 </head>
-<body class="fil-body">
+<body>
   <header class="shell-head">
     <div class="shell-brand">
       <span class="shell-mark">🧊</span>
@@ -27,56 +17,62 @@
       </div>
     </div>
     <div class="shell-meta">
-      <a href="https://github.com/brodrigos/filament-control" class="shell-chip">github</a>
+      <a href="https://github.com/brodrigos/filament-control" class="shell-chip" target="_blank">github</a>
       <span class="shell-chip" data-state="online">v1.0</span>
     </div>
   </header>
 
   <main class="shell-main">
-    <section class="fil-hero">
-      <div class="fil-brand">
-        <div class="fil-mark">3D</div>
-        <div>
-          <strong>Filament3D</strong>
-          <span>Controle de Consumo de Filamento</span>
-        </div>
-      </div>
-      <p class="muted fil-intro">
+    <div class="fil-hero">
+      <h3 class="section-title">Sobre o Projeto</h3>
+      <p class="muted" style="margin-bottom: 24px; font-size: 1rem; line-height: 1.6;">
         Monitoramento em tempo real para impressoras rodando <strong>Klipper + Moonraker</strong> (ex: 192.168.1.101:85). 
         Registra automaticamente o consumo de filamento ao detectar impressões <strong>concluídas</strong> ou <strong>canceladas</strong>, 
-        calcula custo proporcional em <strong>USD ($)</strong> e gerencia múltiplas bobinas com histórico persistente.
+        calcula o custo proporcional em <strong>USD ($)</strong> e gerencia múltiplas bobinas com histórico persistente.
       </p>
 
-      <h3 class="section-title">Recursos</h3>
-      <div class="stat-grid">
+      <h3 class="section-title">Recursos Principais</h3>
+      <div class="stat-grid" style="margin-bottom: 32px;">
         <div class="stat-tile">
-          <span class="stat-value">Tempo Real</span>
-          <span class="stat-label">Estado e progresso direto do Moonraker</span>
+          <div>
+            <div class="stat-value"><i class="fa-solid fa-signal" style="font-size: 1.2rem;"></i></div>
+            <div class="stat-label"><strong>Tempo Real</strong><br>Estado e progresso direto do Moonraker</div>
+          </div>
         </div>
         <div class="stat-tile">
-          <span class="stat-value">USD ($)</span>
-          <span class="stat-label">Cálculo de custo por grama com base no peso líquido</span>
+          <div>
+            <div class="stat-value"><i class="fa-solid fa-dollar-sign" style="font-size: 1.2rem;"></i></div>
+            <div class="stat-label"><strong>Custo em USD</strong><br>Cálculo por grama com base no peso líquido</div>
+          </div>
         </div>
         <div class="stat-tile">
-          <span class="stat-value">Auto Debit</span>
-          <span class="stat-label">Débito automático ao detectar complete / cancelled</span>
+          <div>
+            <div class="stat-value"><i class="fa-solid fa-bolt" style="font-size: 1.2rem;"></i></div>
+            <div class="stat-label"><strong>Débito Automático</strong><br>Abate automático ao detectar complete/cancelled</div>
+          </div>
         </div>
         <div class="stat-tile">
-          <span class="stat-value">Spools</span>
-          <span class="stat-label">Cadastro, ativação e histórico por bobina</span>
+          <div>
+            <div class="stat-value"><i class="fa-solid fa-scroll" style="font-size: 1.2rem;"></i></div>
+            <div class="stat-label"><strong>Gestão de Bobinas</strong><br>Cadastro de rolos, materiais e histórico</div>
+          </div>
         </div>
       </div>
 
-      <h3 class="section-title">Instalação no Linux</h3>
-      <div class="av1-details open">
-        <summary>Ver comando de instalação automática</summary>
-        <pre style="margin-top: 8px; color: var(--text); background: var(--surface-2); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); overflow-x: auto; font-size: 0.82rem;">git clone https://github.com/brodrigos/filament-control.git
+      <h3 class="section-title">Instalação no Servidor Linux da Impressora</h3>
+      <details class="av1-details open">
+        <summary>Comando de Instalação Automática (Systemd)</summary>
+        <div style="padding: 0 16px 16px;">
+          <pre style="background: var(--bg); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); overflow-x: auto; font-size: 0.85rem; color: #34d399;">git clone https://github.com/brodrigos/filament-control.git
 cd filament-control
 chmod +x install-script.sh
 bash install-script.sh</pre>
-      </div>
-      <p class="muted" style="font-size: 0.78rem; margin-top: 6px;">O script cria o serviço Systemd <code>filament-control</code>, reinicia automaticamente e monitora o Moonraker na porta 3030.</p>
-    </section>
+          <p class="muted" style="margin-top: 10px; font-size: 0.82rem;">
+            O script configura o serviço Systemd <code>filament-control</code> na porta <strong>3030</strong>, garantindo reinicialização automática junto ao Moonraker.
+          </p>
+        </div>
+      </details>
+    </div>
   </main>
 </body>
 </html>
