@@ -277,10 +277,13 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // Frontend HTML
-    if (pathname === '/' || pathname === '/index.html') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(getHTMLContent());
+    // Serve arquivos estáticos (index.html físico com Tailwind, etc.)
+    const staticPath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname.slice(1));
+    if (fs.existsSync(staticPath) && fs.statSync(staticPath).isFile()) {
+        const ext = path.extname(staticPath).toLowerCase();
+        const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8' };
+        res.writeHead(200, { 'Content-Type': mime[ext] || 'application/octet-stream' });
+        res.end(fs.readFileSync(staticPath));
         return;
     }
 
