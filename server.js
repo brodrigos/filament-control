@@ -420,8 +420,8 @@ function getHTMLContent() {
                             </h2>
                             <div class="grid grid-cols-3 gap-4 mb-4">
                                 <div class="bg-gray-700 bg-opacity-40 p-4 rounded-xl border border-gray-600">
-                                    <p class="text-xs text-gray-400 uppercase">Total Gasto (Histórico)</p>
-                                    <p id="stat-total-cost" class="text-2xl font-bold text-green-400 mt-1">R$ 0,00</p>
+                                    <p class="text-xs text-gray-400 uppercase">Total Gasto (USD)</p>
+                                    <p id="stat-total-cost" class="text-2xl font-bold text-green-400 mt-1">$ 0.00</p>
                                 </div>
                                 <div class="bg-gray-700 bg-opacity-40 p-4 rounded-xl border border-gray-600">
                                     <p class="text-xs text-gray-400 uppercase">Filamento Consumido</p>
@@ -520,8 +520,8 @@ function getHTMLContent() {
                         <input type="number" id="spool-empty" value="200" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Preço (R$)</label>
-                        <input type="number" step="0.01" id="spool-cost" value="89.90" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Preço ($ USD)</label>
+                        <input type="number" step="0.01" id="spool-cost" value="19.99" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
                 <div>
@@ -640,7 +640,7 @@ function getHTMLContent() {
                 totalCost += h.cost || 0;
                 totalGrams += h.filamentUsedGrams || 0;
             });
-            document.getElementById('stat-total-cost').innerText = 'R$ ' + totalCost.toFixed(2);
+            document.getElementById('stat-total-cost').innerText = '$ ' + totalCost.toFixed(2);
             document.getElementById('stat-total-grams').innerText = totalGrams.toFixed(1) + ' g';
             document.getElementById('stat-total-prints').innerText = appData.history.length;
 
@@ -675,7 +675,7 @@ function getHTMLContent() {
                             </div>
                         </div>
                         <div class="text-xs text-gray-400 flex justify-between">
-                            <span>Custo: R$ \${spool.cost.toFixed(2)}</span>
+                            <span>Preço: $\${spool.cost.toFixed(2)}</span>
                             <span>Diâmetro: \${spool.diameterMm}mm</span>
                         </div>
                     </div>
@@ -703,7 +703,7 @@ function getHTMLContent() {
                         <td class="p-4 text-gray-300">\${spool ? spool.name : 'Bobina Removida'}</td>
                         <td class="p-4 text-blue-400 font-bold">+\${h.filamentUsedGrams} g</td>
                         <td class="p-4 text-gray-300">\${h.filamentUsedMeters} m</td>
-                        <td class="p-4 text-green-400 font-bold">R$ \${(h.cost || 0).toFixed(2)}</td>
+                        <td class="p-4 text-green-400 font-bold">$\${(h.cost || 0).toFixed(2)}</td>
                     \`;
                     historyBody.appendChild(row);
                 });
