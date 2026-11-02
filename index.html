@@ -1,78 +1,753 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Filament3D — Controle de Consumo de Filamento 3D</title>
-  <link rel="stylesheet" href="shell.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Filament3D — Consumo de Filamento</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #07080b;
+        --bg-glow-a: rgba(109, 139, 255, 0.10);
+        --bg-glow-b: rgba(139, 92, 246, 0.08);
+        --surface: #0d0f15;
+        --surface-2: #11141c;
+        --surface-3: #161a24;
+        --border: #1e222d;
+        --border-strong: #2b3140;
+        --text: #e9ebf2;
+        --muted: #939bb0;
+        --dim: #616a7e;
+        --accent: #6d8bff;
+        --accent-soft: rgba(109, 139, 255, 0.14);
+        --accent-line: rgba(109, 139, 255, 0.42);
+        --violet: #8b5cf6;
+        --success: #34d399;
+        --warning: #fbbf24;
+        --danger: #f87171;
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px -18px rgba(0, 0, 0, 0.9);
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background-color: var(--bg);
+        background-image:
+          radial-gradient(900px 520px at 12% -12%, var(--bg-glow-a), transparent 62%),
+          radial-gradient(760px 460px at 90% 0%, var(--bg-glow-b), transparent 58%);
+        background-attachment: fixed;
+        color: var(--text);
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      [hidden] { display: none !important; }
+
+      /* ---------- Header ---------- */
+      .fil-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(7, 8, 11, 0.85);
+        backdrop-filter: blur(8px);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      .fil-brand { display: flex; align-items: center; gap: 12px; }
+      .fil-mark {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        font-size: 1.05rem;
+        background: linear-gradient(140deg, #a9bcff, var(--accent) 46%, var(--violet));
+        box-shadow: 0 6px 18px -6px rgba(109, 139, 255, 0.75);
+      }
+      .fil-title { display: flex; flex-direction: column; line-height: 1.2; }
+      .fil-title strong { font-size: 0.98rem; letter-spacing: -0.01em; color: var(--text); }
+      .fil-title span { font-size: 0.72rem; color: var(--dim); }
+      .fil-meta { display: flex; align-items: center; gap: 10px; }
+      .fil-chip {
+        font-size: 0.7rem;
+        color: var(--muted);
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        border-radius: 99px;
+        padding: 3px 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+      }
+      .fil-chip.online { color: var(--success); border-color: rgba(52, 211, 153, 0.3); }
+      .fil-chip.github { color: var(--accent); border-color: var(--accent-line); }
+
+      /* ---------- Main ---------- */
+      .fil-main {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 22px 20px 100px;
+        width: 100%;
+      }
+
+      /* ---------- Tabs bar ---------- */
+      .fil-tabsbar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 4px;
+      }
+      .fil-tab {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-bottom-color: transparent;
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+        color: var(--muted);
+        padding: 10px 18px;
+        font: inherit;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        margin-bottom: -1px;
+      }
+      .fil-tab:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+      .fil-tab.on { color: var(--text); border-bottom-color: var(--accent); background: var(--surface-2); border-color: var(--border); }
+      .fil-actions { display: flex; gap: 8px; }
+
+      /* ---------- Cards ---------- */
+      .fil-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow-card);
+        transition: border-color 0.2s;
+      }
+      .fil-card:hover { border-color: var(--border-strong); }
+      .fil-card.compact { padding: 14px; }
+
+      .fil-section-title {
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: 0.01em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .fil-section-title i { color: var(--accent); }
+
+      .fil-hint {
+        margin: 0 0 14px;
+        font-size: 11.5px;
+        color: var(--dim);
+        line-height: 1.45;
+      }
+
+      /* ---------- Stats grid ---------- */
+      .fil-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+      .fil-stat {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 14px;
+      }
+      .fil-stat b { display: block; font-size: 20px; font-weight: 600; letter-spacing: -0.4px; }
+      .fil-stat span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+      /* ---------- Buttons ---------- */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 18px;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent), var(--violet));
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(109, 139, 255, 0.3);
+      }
+      .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); }
+      .btn-secondary {
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-secondary:hover { background: var(--surface-3); border-color: var(--border-strong); color: #fff; }
+      .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+      .btn-text {
+        background: transparent;
+        color: var(--muted);
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+      }
+      .btn-text:hover { background: var(--surface-2); color: var(--text); }
+      .btn-text.danger:hover { color: var(--danger); background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.2); }
+
+      /* ---------- Inputs ---------- */
+      .fil-input {
+        width: 100%;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: var(--radius-sm);
+        padding: 8px 12px;
+        font: inherit;
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .fil-input:focus { border-color: var(--accent-line); }
+
+      /* ---------- Tabs content ---------- */
+      .fil-tab-panel { display: none; }
+      .fil-tab-panel.active { display: block; }
+
+      /* ---------- Printer status chips ---------- */
+      .printer-chip { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+      .printer-chip.up { background: var(--success); box-shadow: 0 0 8px var(--success); }
+      .printer-chip.down { background: var(--danger); }
+
+      /* ---------- Progress bars ---------- */
+      .fil-progress-bg {
+        width: 100%;
+        height: 3px;
+        background: var(--surface-3);
+        border-radius: 99px;
+        overflow: hidden;
+        border: 1px solid var(--border-strong);
+      }
+      .fil-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--violet));
+        width: 0%;
+        transition: width 0.4s ease;
+        border-radius: 99px;
+      }
+
+      /* ---------- Spool cards ---------- */
+      .spool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+      .spool-card {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 16px;
+        transition: border-color 0.2s;
+      }
+      .spool-card:hover { border-color: var(--border-strong); }
+      .spool-card.active { border-color: var(--accent-line); background: rgba(109, 139, 255, 0.05); }
+      .spool-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+      .spool-name { color: var(--text); font-weight: 600; font-size: 1rem; }
+      .spool-material {
+        font-size: 11px;
+        color: var(--accent);
+        background: rgba(109, 139, 255, 0.10);
+        border: 1px solid var(--accent-line);
+        padding: 2px 8px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .spool-color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        border: 1px solid rgba(0,0,0,0.4);
+        margin-right: 6px;
+      }
+      .spool-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px; }
+      .spool-actions { display: flex; gap: 6px; }
+
+      /* ---------- Tables ---------- */
+      .fil-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .fil-table th {
+        text-align: left;
+        padding: 8px 10px;
+        color: var(--dim);
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        border-bottom: 1px solid var(--border);
+      }
+      .fil-table td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      .fil-table tbody tr { transition: background 0.15s; }
+      .fil-table tbody tr:hover { background: var(--surface-2); }
+
+      /* ---------- Modal ---------- */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      .modal-backdrop[hidden] { display: none !important; }
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        width: min(520px, 92vw);
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 40px 80px -32px rgba(0,0,0,0.9);
+      }
+      .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+      .modal-title { font-size: 1rem; font-weight: 600; color: var(--text); margin: 0; }
+      .modal-close { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 4px; }
+      .modal-close:hover { color: var(--text); }
+      .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+      .modal-row { margin-bottom: 14px; }
+      .modal-label { display: block; font-size: 11px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+
+      /* ---------- History empty ---------- */
+      .fil-empty {
+        color: var(--muted);
+        font-size: 13px;
+        padding: 14px;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius);
+        text-align: center;
+      }
+    </style>
 </head>
 <body>
-  <header class="shell-head">
-    <div class="shell-brand">
-      <span class="shell-mark">🧊</span>
-      <div class="shell-title">
-        <strong>Filament3D</strong>
-        <span>Klipper · Moonraker · consumo em USD</span>
-      </div>
-    </div>
-    <div class="shell-meta">
-      <a href="https://github.com/brodrigos/filament-control" class="shell-chip" target="_blank">github</a>
-      <span class="shell-chip" data-state="online">v1.0</span>
-    </div>
-  </header>
+    <header class="fil-head">
+        <div class="fil-brand">
+            <span class="fil-mark">🧊</span>
+            <div class="fil-title">
+                <strong>Filament3D</strong>
+                <span>Klipper · Moonraker · Consumo em USD</span>
+            </div>
+        </div>
+        <div class="fil-meta">
+            <span class="fil-chip" id="printer-chip-status">
+                <span class="printer-chip" id="printer-chip-dot"></span>
+                <span id="printer-status-text">Conectando...</span>
+            </span>
+            <span class="fil-chip">v2.0 Brodrigos</span>
+            <a href="https://github.com/brodrigos/filament-control" target="_blank" class="fil-chip github">github</a>
+        </div>
+    </header>
 
-  <main class="shell-main">
-    <div class="fil-hero">
-      <h3 class="section-title">Sobre o Projeto</h3>
-      <p class="muted" style="margin-bottom: 24px; font-size: 1rem; line-height: 1.6;">
-        Monitoramento em tempo real para impressoras rodando <strong>Klipper + Moonraker</strong> (ex: 192.168.1.101:85). 
-        Registra automaticamente o consumo de filamento ao detectar impressões <strong>concluídas</strong> ou <strong>canceladas</strong>, 
-        calcula o custo proporcional em <strong>USD ($)</strong> e gerencia múltiplas bobinas com histórico persistente.
-      </p>
+    <main class="fil-main">
+        <div class="fil-tabsbar">
+            <a href="#" class="fil-tab on" id="tab-dashboard-btn" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+            <a href="#" class="fil-tab" id="tab-spools-btn" onclick="switchTab('spools')"><i class="fa-solid fa-scroll"></i> Bobinas</a>
+            <a href="#" class="fil-tab" id="tab-history-btn" onclick="switchTab('history')"><i class="fa-solid fa-history"></i> Histórico</a>
+            <div style="flex:1"></div>
+            <div class="fil-actions">
+                <button class="btn btn-secondary btn-sm" onclick="refreshData()"><i class="fa-solid fa-sync"></i> Atualizar</button>
+                <button class="btn btn-primary btn-sm" onclick="openAddSpoolModal()"><i class="fa-solid fa-plus"></i> Nova Bobina</button>
+            </div>
+        </div>
 
-      <h3 class="section-title">Recursos Principais</h3>
-      <div class="stat-grid" style="margin-bottom: 32px;">
-        <div class="stat-tile">
-          <div>
-            <div class="stat-value"><i class="fa-solid fa-signal" style="font-size: 1.2rem;"></i></div>
-            <div class="stat-label"><strong>Tempo Real</strong><br>Estado e progresso direto do Moonraker</div>
-          </div>
-        </div>
-        <div class="stat-tile">
-          <div>
-            <div class="stat-value"><i class="fa-solid fa-dollar-sign" style="font-size: 1.2rem;"></i></div>
-            <div class="stat-label"><strong>Custo em USD</strong><br>Cálculo por grama com base no peso líquido</div>
-          </div>
-        </div>
-        <div class="stat-tile">
-          <div>
-            <div class="stat-value"><i class="fa-solid fa-bolt" style="font-size: 1.2rem;"></i></div>
-            <div class="stat-label"><strong>Débito Automático</strong><br>Abate automático ao detectar complete/cancelled</div>
-          </div>
-        </div>
-        <div class="stat-tile">
-          <div>
-            <div class="stat-value"><i class="fa-solid fa-scroll" style="font-size: 1.2rem;"></i></div>
-            <div class="stat-label"><strong>Gestão de Bobinas</strong><br>Cadastro de rolos, materiais e histórico</div>
-          </div>
-        </div>
-      </div>
+        <!-- DASHBOARD -->
+        <section class="fil-tab-panel active" id="panel-dashboard">
+            <div class="fil-stats">
+                <div class="fil-stat">
+                    <span>Estado da Impressora</span>
+                    <b id="lbl-printer-state" style="color:var(--text)">-</b>
+                </div>
+                <div class="fil-stat">
+                    <span>Arquivo Atual</span>
+                    <b id="lbl-print-file" style="color:var(--text); font-size:17px;">-</b>
+                </div>
+                <div class="fil-stat">
+                    <span>Filamento Usado (Job)</span>
+                    <b id="lbl-filament-used" style="color:var(--text)">0.00 m</b>
+                </div>
+                <div class="fil-stat">
+                    <span>Progresso</span>
+                    <b id="lbl-print-progress" style="color:var(--text)">0%</b>
+                </div>
+            </div>
 
-      <h3 class="section-title">Instalação no Servidor Linux da Impressora</h3>
-      <details class="av1-details open">
-        <summary>Comando de Instalação Automática (Systemd)</summary>
-        <div style="padding: 0 16px 16px;">
-          <pre style="background: var(--bg); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); overflow-x: auto; font-size: 0.85rem; color: #34d399;">git clone https://github.com/brodrigos/filament-control.git
-cd filament-control
-chmod +x install-script.sh
-bash install-script.sh</pre>
-          <p class="muted" style="margin-top: 10px; font-size: 0.82rem;">
-            O script configura o serviço Systemd <code>filament-control</code> na porta <strong>3030</strong>, garantindo reinicialização automática junto ao Moonraker.
-          </p>
+            <div class="fil-card compact">
+                <h3 class="fil-section-title"><i class="fa-solid fa-circle-dot" style="color:var(--accent)"></i> Bobina Ativa</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <p id="active-spool-name" style="margin:0; font-size:1.1rem; font-weight:600; color:var(--text)">Nenhuma bobina cadastrada</p>
+                            <span id="active-spool-material" class="spool-material">PLA</span>
+                        </div>
+                        <div class="fil-progress-bg" style="margin-bottom:6px;">
+                            <div class="fil-progress-fill" id="active-spool-bar" style="width:0%"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.875rem; color:var(--muted)">
+                            <span>Restante: <strong id="active-spool-weight" style="color:var(--text)">0g</strong></span>
+                            <span>Total Líquido: <strong id="active-spool-total" style="color:var(--text)">1000g</strong></span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="openSimulateModal()"><i class="fa-solid fa-calculator"></i> Simular Consumo</button>
+                        <button class="btn btn-primary btn-sm" onclick="switchTab('spools')"><i class="fa-solid fa-exchange-alt"></i> Trocar Bobina</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fil-card compact">
+                <h3 class="fil-section-title"><i class="fa-solid fa-wallet" style="color:var(--success)"></i> Resumo Financeiro e Consumo</h3>
+                <div class="fil-stats">
+                    <div class="fil-stat">
+                        <span>Total Gasto (USD)</span>
+                        <b id="stat-total-cost" style="color:var(--success)">$ 0.00</b>
+                    </div>
+                    <div class="fil-stat">
+                        <span>Filamento Consumido</span>
+                        <b id="stat-total-grams" style="color:var(--accent)">0 g</b>
+                    </div>
+                    <div class="fil-stat">
+                        <span>Impressões Registradas</span>
+                        <b id="stat-total-prints" style="color:var(--violet)">0</b>
+                    </div>
+                </div>
+                <p style="margin:10px 0 0; font-size:11px; color:var(--dim);">* Cálculo baseado no peso líquido e custo cadastrado de cada bobina.</p>
+                <p style="margin:6px 0 0; text-align:right;"><a href="#" onclick="switchTab('history')" class="btn-text">Ver histórico completo &rarr;</a></p>
+            </div>
+        </section>
+
+        <!-- SPOOLS -->
+        <section class="fil-tab-panel" id="panel-spools">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <h2 style="margin:0; font-size:1rem; font-weight:600; color:var(--text)">Gerenciamento de Bobinas</h2>
+                <button class="btn btn-primary btn-sm" onclick="openAddSpoolModal()"><i class="fa-solid fa-plus"></i> Adicionar Bobina</button>
+            </div>
+            <div class="spool-grid" id="spools-grid">
+                <!-- injected -->
+            </div>
+        </section>
+
+        <!-- HISTORY -->
+        <section class="fil-tab-panel" id="panel-history">
+            <h2 style="margin:0 0 10px; font-size:1rem; font-weight:600; color:var(--text)">Histórico de Consumo e Impressões</h2>
+            <table class="fil-table">
+                <thead>
+                    <tr>
+                        <th style="width:17%">Data / Hora</th>
+                        <th style="width:26%">Impressão / Arquivo</th>
+                        <th style="width:20%">Bobina</th>
+                        <th style="width:13%">Consumido (g)</th>
+                        <th style="width:12%">Comprimento (m)</th>
+                        <th style="width:12%">Custo Estimado</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body">
+                    <!-- injected -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <!-- MODAL: ADD SPOOL -->
+    <div class="modal-backdrop" id="modal-add-spool" hidden>
+        <div class="modal">
+            <div class="modal-head">
+                <h3 class="modal-title">Cadastrar Nova Bobina</h3>
+                <button class="modal-close" onclick="closeAddSpoolModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-add-spool" onsubmit="submitAddSpool(event)">
+                <div class="modal-row">
+                    <label class="modal-label">Nome da Bobina</label>
+                    <input type="text" id="spool-name" required class="fil-input" placeholder="Ex: PLA Azul Star">
+                </div>
+                <div class="modal-row">
+                    <label class="modal-label">Material</label>
+                    <select id="spool-material" class="fil-input">
+                        <option value="PLA">PLA</option>
+                        <option value="PETG">PETG</option>
+                        <option value="ABS">ABS</option>
+                        <option value="TPU">TPU</option>
+                        <option value="ASA">ASA</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="modal-row">
+                    <label class="modal-label">Cor</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="color" id="spool-color" value="#3b82f6" style="width:32px; height:32px; border:none; border-radius:6px; cursor:pointer; background:none;">
+                        <input type="text" id="spool-color-hex" value="#3b82f6" class="fil-input" style="width:auto; min-width:120px;">
+                    </div>
+                </div>
+                <div class="modal-row">
+                    <label class="modal-label">Peso Bruto (g)</label>
+                    <input type="number" id="spool-initial" value="1000" required class="fil-input">
+                </div>
+                <div class="modal-row">
+                    <label class="modal-label">Peso do Carretel (g)</label>
+                    <input type="number" id="spool-empty" value="200" required class="fil-input">
+                </div>
+                <div class="modal-row">
+                    <label class="modal-label">Preço ($ USD)</label>
+                    <input type="number" step="0.01" id="spool-cost" value="19.99" required class="fil-input">
+                </div>
+                <div class="modal-row">
+                    <label class="modal-label">Observações / Marca</label>
+                    <input type="text" id="spool-notes" class="fil-input" placeholder="Ex: Voolt3D / Lote 42">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddSpoolModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Bobina</button>
+                </div>
+            </form>
         </div>
-      </details>
     </div>
-  </main>
+
+    <!-- MODAL: SIMULATE -->
+    <div class="modal-backdrop" id="modal-simulate" hidden>
+        <div class="modal">
+            <div class="modal-head">
+                <h3 class="modal-title">Simular / Registrar Consumo</h3>
+                <button class="modal-close" onclick="closeSimulateModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="submitConsume(event)">
+                <div class="modal-row">
+                    <label class="modal-label">Nome da Impressão / Peça</label>
+                    <input type="text" id="sim-print-name" required class="fil-input" placeholder="Ex: Peça V2 Caixa.gcode">
+                </div>
+                <div style="display:flex; gap:14px;">
+                    <div style="flex:1">
+                        <label class="modal-label">Gramas Usadas (g)</label>
+                        <input type="number" step="0.1" id="sim-grams" required class="fil-input" placeholder="Ex: 45.2">
+                    </div>
+                    <div style="flex:1">
+                        <label class="modal-label">Comprimento (m)</label>
+                        <input type="number" step="0.1" id="sim-meters" class="fil-input" placeholder="Ex: 15.0">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeSimulateModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Consumo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let appData = null;
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.fil-tab').forEach(t => t.classList.remove('on'));
+            document.getElementById('tab-' + tabId + '-btn').classList.add('on');
+            document.querySelectorAll('.fil-tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-' + tabId).classList.add('active');
+        }
+
+        function refreshData() {
+            fetch('/api/state')
+                .then(res => res.json())
+                .then(data => { appData = data; renderUI(); })
+                .catch(err => console.error('Erro ao buscar dados:', err));
+        }
+
+        function renderUI() {
+            if (!appData) return;
+
+            // Printer status
+            const chip = document.getElementById('printer-chip-status');
+            const dot = document.getElementById('printer-chip-dot');
+            const text = document.getElementById('printer-status-text');
+            if (appData.printerConnected) {
+                dot.className = 'printer-chip up';
+                text.innerText = 'Online (Moonraker)';
+                chip.style.color = 'var(--success)';
+                chip.style.borderColor = 'rgba(52, 211, 153, 0.3)';
+            } else {
+                dot.className = 'printer-chip down';
+                text.innerText = 'Desconectada';
+                chip.style.color = 'var(--danger)';
+                chip.style.borderColor = 'rgba(248, 113, 113, 0.3)';
+            }
+            if (appData.printerStatus) {
+                const ps = appData.printerStatus.print_stats;
+                const vs = appData.printerStatus.virtual_sdcard;
+                document.getElementById('lbl-printer-state').innerText = ps.state || '-';
+                document.getElementById('lbl-print-file').innerText = ps.filename || 'Nenhum arquivo';
+                document.getElementById('lbl-filament-used').innerText = (ps.filament_used ? (ps.filament_used / 1000).toFixed(2) : '0.00') + ' m';
+                document.getElementById('lbl-print-progress').innerText = (vs && vs.progress ? (vs.progress * 100).toFixed(1) : '0') + '%';
+            } else {
+                document.getElementById('lbl-printer-state').innerText = 'Offline';
+            }
+
+            // Active spool
+            const activeSpool = appData.spools.find(s => s.id === appData.activeSpoolId) || appData.spools[0];
+            const nameEl = document.getElementById('active-spool-name');
+            if (activeSpool) {
+                nameEl.innerText = activeSpool.name;
+                document.getElementById('active-spool-material').innerText = activeSpool.material;
+                const netInitial = activeSpool.initialWeightGrams - activeSpool.emptySpoolWeightGrams;
+                const netCurrent = Math.max(0, activeSpool.currentWeightGrams - activeSpool.emptySpoolWeightGrams);
+                const pct = netInitial > 0 ? Math.min(100, Math.max(0, (netCurrent / netInitial) * 100)) : 0;
+                document.getElementById('active-spool-bar').style.width = pct + '%';
+                document.getElementById('active-spool-weight').innerText = netCurrent.toFixed(0) + 'g';
+                document.getElementById('active-spool-total').innerText = netInitial.toFixed(0) + 'g';
+                nameEl.style.color = 'var(--text)';
+            } else {
+                nameEl.innerText = 'Nenhuma bobina cadastrada';
+                nameEl.style.color = 'var(--muted)';
+            }
+
+            // Stats
+            let totalCost = 0, totalGrams = 0;
+            appData.history.forEach(h => { totalCost += h.cost || 0; totalGrams += h.filamentUsedGrams || 0; });
+            document.getElementById('stat-total-cost').innerText = '$ ' + totalCost.toFixed(2);
+            document.getElementById('stat-total-grams').innerText = totalGrams.toFixed(1) + ' g';
+            document.getElementById('stat-total-prints').innerText = appData.history.length;
+
+            // Spool grid
+            const grid = document.getElementById('spools-grid');
+            grid.innerHTML = '';
+            appData.spools.forEach(spool => {
+                const isActive = spool.id === appData.activeSpoolId;
+                const netInitial = spool.initialWeightGrams - spool.emptySpoolWeightGrams;
+                const netCurrent = Math.max(0, spool.currentWeightGrams - spool.emptySpoolWeightGrams);
+                const pct = netInitial > 0 ? Math.min(100, Math.max(0, (netCurrent / netInitial) * 100)) : 0;
+                const card = document.createElement('div');
+                card.className = 'spool-card ' + (isActive ? 'active' : '');
+                card.innerHTML = `
+                    <div class="spool-header">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="spool-color-dot" style="background:${spool.color || '#3b82f6'}"></span>
+                            <span class="spool-name">${spool.name}</span>
+                        </div>
+                        <span class="spool-material">${spool.material}</span>
+                    </div>
+                    <p style="font-size:0.82rem; color:var(--muted); margin:8px 0 10px;">${spool.notes || 'Sem observações'}</p>
+                    <div style="margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:6px;">
+                            <span style="color:var(--muted)">Restante Líquido:</span>
+                            <strong style="color:var(--text)">${netCurrent.toFixed(0)}g / ${netInitial.toFixed(0)}g</strong>
+                        </div>
+                        <div class="fil-progress-bg">
+                            <div class="fil-progress-fill" style="width:${pct}%; background: linear-gradient(90deg, var(--accent), var(--violet));"></div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.82rem; color:var(--muted); margin-bottom:8px;">
+                        <span>Preço: $${spool.cost.toFixed(2)}</span> | <span>Diâmetro: ${spool.diameterMm}mm</span>
+                    </div>
+                    <div class="spool-actions">
+                        ${!isActive ? `<button class="btn btn-primary btn-sm" onclick="setActiveSpool('${spool.id}')">Ativar</button>` : `<span style="font-size:0.78rem; color:var(--accent); font-weight:600;">Ativa</span>`}
+                        <button class="btn btn-text danger" onclick="deleteSpool('${spool.id}')"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // History table
+            const tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = '';
+            if (appData.history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="fil-empty">Nenhum registro de consumo no histórico.</td></tr>`;
+            } else {
+                appData.history.forEach(h => {
+                    const spool = appData.spools.find(s => s.id === h.spoolId);
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="color:var(--muted); font-size:0.85rem;">${new Date(h.timestamp).toLocaleString('pt-BR')}</td>
+                        <td style="color:var(--text); font-weight:500;">${h.printName}</td>
+                        <td style="color:var(--muted); font-size:0.85rem;">${spool ? spool.name : 'Bobina Removida'}</td>
+                        <td style="color:var(--accent); font-weight:600;">+${h.filamentUsedGrams} g</td>
+                        <td style="color:var(--muted); font-size:0.85rem;">${h.filamentUsedMeters} m</td>
+                        <td style="color:var(--success); font-weight:600;">$${(h.cost || 0).toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // Modals
+        function openAddSpoolModal() { document.getElementById('modal-add-spool').classList.remove('hidden'); }
+        function closeAddSpoolModal() { document.getElementById('modal-add-spool').classList.add('hidden'); }
+        function openSimulateModal() { document.getElementById('modal-simulate').classList.remove('hidden'); }
+        function closeSimulateModal() { document.getElementById('modal-simulate').classList.add('hidden'); }
+
+        document.getElementById('spool-color').addEventListener('input', e => {
+            document.getElementById('spool-color-hex').value = e.target.value;
+        });
+
+        function submitAddSpool(event) {
+            event.preventDefault();
+            const payload = {
+                name: document.getElementById('spool-name').value,
+                material: document.getElementById('spool-material').value,
+                color: document.getElementById('spool-color').value,
+                initialWeightGrams: parseFloat(document.getElementById('spool-initial').value),
+                emptySpoolWeightGrams: parseFloat(document.getElementById('spool-empty').value),
+                currentWeightGrams: parseFloat(document.getElementById('spool-initial').value),
+                cost: parseFloat(document.getElementById('spool-cost').value),
+                notes: document.getElementById('spool-notes').value
+            };
+            fetch('/api/spools', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeAddSpoolModal();
+                        document.getElementById('form-add-spool').reset();
+                        refreshData();
+                    } else {
+                        alert('Erro ao salvar bobina: ' + data.error);
+                    }
+                });
+        }
+
+        function setActiveSpool(spoolId) {
+            fetch('/api/active-spool', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spoolId }) })
+                .then(res => res.json())
+                .then(data => { if (data.success) refreshData(); });
+        }
+
+        function deleteSpool(spoolId) {
+            if (!confirm('Deseja realmente excluir esta bobina?')) return;
+            fetch('/api/spools/' + spoolId, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => { if (data.success) refreshData(); });
+        }
+
+        function submitConsume(event) {
+            event.preventDefault();
+            const payload = {
+                printName: document.getElementById('sim-print-name').value,
+                grams: parseFloat(document.getElementById('sim-grams').value),
+                meters: parseFloat(document.getElementById('sim-meters').value) || 0
+            };
+            fetch('/api/consume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        closeSimulateModal();
+                        refreshData();
+                    } else {
+                        alert('Erro: ' + data.error);
+                    }
+                });
+        }
+
+        setInterval(refreshData, 5000);
+        refreshData();
+    </script>
 </body>
 </html>
