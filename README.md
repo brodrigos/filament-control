@@ -6,6 +6,12 @@ Desenvolvido para monitoramento em tempo real do estado da impressora, cálculo 
 
 ---
 
+## 📷 Preview
+
+![Filament3D Dashboard](screenshot-main.png)
+
+---
+
 ## 🚀 Instalação Direta no Servidor da Impressora (Linux)
 
 Rode o script de instalação automática via SSH no host da sua impressora (Raspberry Pi ou SBC Linux):
