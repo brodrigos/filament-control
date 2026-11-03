@@ -11,7 +11,7 @@ function loadLastPrintState() {
     try {
         return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     } catch {
-        return { state: null, filename: null, filamentUsed: 0, timestamp: null };
+        return { state: null, filename: null, startFilamentUsed: 0, lastFilamentUsed: 0, timestamp: null };
     }
 }
 
@@ -78,7 +78,7 @@ function fetchPrinterStatus(printerUrl, callback) {
 }
 
 // ---------------------------------------------------------------------------
-// BACKGROUND MONITORING LOOP (Roda independente de haver navegador aberto)
+// BACKGROUND MONITORING LOOP ROBUSTO
 // ---------------------------------------------------------------------------
 let lastPrinterStatus = null;
 let printerConnected = false;
@@ -96,19 +96,34 @@ function checkPrinterAndUpdateState() {
             const lastState = loadLastPrintState();
             const currentState = ps.state; // 'printing', 'complete', 'cancelled', 'standby', 'error', etc.
             const filename = ps.filename || 'Desconhecido.gcode';
-            const filamentUsedMm = ps.filament_used || 0; // mm
+            const filamentUsedMm = ps.filament_used || 0; // mm acumulados no Klipper
 
             const radiusCm = 0.0875;
             const activeSpool = data.spools.find(s => s.id === data.activeSpoolId) || data.spools[0];
             const density = activeSpool ? (activeSpool.densityGcm3 || 1.24) : 1.24;
 
-            // Se estava imprimindo e mudou para outro estado (concluído, cancelado, erro, standby)
+            // 1. Acabou de iniciar uma impressão (transição para 'printing')
+            if (currentState === 'printing' && lastState.state !== 'printing') {
+                saveLastPrintState({
+                    state: 'printing',
+                    filename: filename,
+                    startFilamentUsed: filamentUsedMm,
+                    lastFilamentUsed: filamentUsedMm,
+                    timestamp: new Date().toISOString()
+                });
+                console.log(`[Filament3D] Nova impressão iniciada: ${filename} (Filamento inicial Klipper: ${filamentUsedMm}mm)`);
+                return;
+            }
+
+            // 2. Estava imprimindo e saiu de 'printing' (concluído, cancelado, erro, standby)
             if (lastState.state === 'printing' && currentState !== 'printing') {
-                const deltaMm = Math.max(0, filamentUsedMm - (lastState.filamentUsed || 0));
+                // Se o Klipper resetou ou mudou, usamos o lastFilamentUsed ou filamentUsedMm final
+                const endFilamentUsed = filamentUsedMm > (lastState.startFilamentUsed || 0) ? filamentUsedMm : (lastState.lastFilamentUsed || filamentUsedMm);
+                const deltaMm = Math.max(0, endFilamentUsed - (lastState.startFilamentUsed || 0));
                 const deltaMeters = deltaMm / 1000;
                 const deltaGrams = Math.PI * Math.pow(radiusCm, 2) * (deltaMeters * 100) * density;
 
-                if (deltaGrams > 0.5 && activeSpool) {
+                if (deltaGrams > 0.3 && activeSpool) {
                     activeSpool.currentWeightGrams = Math.max(0, activeSpool.currentWeightGrams - deltaGrams);
                     
                     const netWeight = activeSpool.initialWeightGrams - activeSpool.emptySpoolWeightGrams;
@@ -120,28 +135,48 @@ function checkPrinterAndUpdateState() {
                     else if (currentState === 'error' || currentState === 'standby') statusLabel = 'Interrompido/Falha';
                     else statusLabel = 'Parado (' + currentState + ')';
 
+                    const printNameClean = lastState.filename || filename;
                     data.history.unshift({
                         id: Date.now().toString(),
                         spoolId: activeSpool.id,
-                        printName: filename + ' (' + statusLabel + ')',
+                        printName: printNameClean + ' (' + statusLabel + ')',
                         filamentUsedMeters: parseFloat(deltaMeters.toFixed(2)),
                         filamentUsedGrams: parseFloat(deltaGrams.toFixed(1)),
                         cost: parseFloat(cost.toFixed(2)),
                         timestamp: new Date().toISOString()
                     });
                     saveData(data);
-                    console.log(`[Filament3D] Impressão registrada: ${filename} (${statusLabel}) - ${deltaGrams.toFixed(1)}g consumidas.`);
+                    console.log(`[Filament3D] Impressão registrada: ${printNameClean} (${statusLabel}) - ${deltaGrams.toFixed(1)}g consumidas.`);
                 }
-            }
 
-            // Atualiza o estado salvo se o arquivo ou o estado mudou
-            if (lastState.state !== currentState || lastState.filename !== filename || lastState.filamentUsed !== filamentUsedMm) {
+                // Salva novo estado inativo
                 saveLastPrintState({
                     state: currentState,
                     filename: filename,
-                    filamentUsed: filamentUsedMm,
+                    startFilamentUsed: 0,
+                    lastFilamentUsed: filamentUsedMm,
                     timestamp: new Date().toISOString()
                 });
+                return;
+            }
+
+            // 3. Continua imprimindo: atualiza apenas o último valor visto (caso ocorra queda de energia)
+            if (currentState === 'printing' && lastState.state === 'printing') {
+                if (filamentUsedMm > (lastState.lastFilamentUsed || 0)) {
+                    saveLastPrintState({
+                        ...lastState,
+                        lastFilamentUsed: filamentUsedMm
+                    });
+                }
+            } else {
+                // Apenas mantém atualizado o estado ocioso
+                if (lastState.state !== currentState) {
+                    saveLastPrintState({
+                        ...lastState,
+                        state: currentState,
+                        filename: filename
+                    });
+                }
             }
         }
     });
