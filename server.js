@@ -54,7 +54,6 @@ function saveData(data) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// Proxy/Fetcher helper para Moonraker
 function fetchPrinterStatus(printerUrl, callback) {
     const parsed = url.parse(`${printerUrl}/printer/objects/query?print_stats&virtual_sdcard&toolhead`);
     const req = http.get({
@@ -78,12 +77,85 @@ function fetchPrinterStatus(printerUrl, callback) {
     req.on('timeout', () => { req.destroy(); callback(new Error('Timeout connecting to printer')); });
 }
 
+// ---------------------------------------------------------------------------
+// BACKGROUND MONITORING LOOP (Roda independente de haver navegador aberto)
+// ---------------------------------------------------------------------------
+let lastPrinterStatus = null;
+let printerConnected = false;
+let printerError = null;
+
+function checkPrinterAndUpdateState() {
+    const data = loadData();
+    fetchPrinterStatus(data.settings.printerUrl, (err, printerStatus) => {
+        printerConnected = !err;
+        printerError = err ? err.message : null;
+
+        if (!err && printerStatus && printerStatus.print_stats) {
+            lastPrinterStatus = printerStatus;
+            const ps = printerStatus.print_stats;
+            const lastState = loadLastPrintState();
+            const currentState = ps.state; // 'printing', 'complete', 'cancelled', 'standby', 'error', etc.
+            const filename = ps.filename || 'Desconhecido.gcode';
+            const filamentUsedMm = ps.filament_used || 0; // mm
+
+            const radiusCm = 0.0875;
+            const activeSpool = data.spools.find(s => s.id === data.activeSpoolId) || data.spools[0];
+            const density = activeSpool ? (activeSpool.densityGcm3 || 1.24) : 1.24;
+
+            // Se estava imprimindo e mudou para outro estado (concluído, cancelado, erro, standby)
+            if (lastState.state === 'printing' && currentState !== 'printing') {
+                const deltaMm = Math.max(0, filamentUsedMm - (lastState.filamentUsed || 0));
+                const deltaMeters = deltaMm / 1000;
+                const deltaGrams = Math.PI * Math.pow(radiusCm, 2) * (deltaMeters * 100) * density;
+
+                if (deltaGrams > 0.5 && activeSpool) {
+                    activeSpool.currentWeightGrams = Math.max(0, activeSpool.currentWeightGrams - deltaGrams);
+                    
+                    const netWeight = activeSpool.initialWeightGrams - activeSpool.emptySpoolWeightGrams;
+                    const costPerGram = netWeight > 0 ? (activeSpool.cost / netWeight) : 0;
+                    const cost = deltaGrams * costPerGram;
+
+                    let statusLabel = 'Concluído';
+                    if (currentState === 'cancelled') statusLabel = 'Cancelado';
+                    else if (currentState === 'error' || currentState === 'standby') statusLabel = 'Interrompido/Falha';
+                    else statusLabel = 'Parado (' + currentState + ')';
+
+                    data.history.unshift({
+                        id: Date.now().toString(),
+                        spoolId: activeSpool.id,
+                        printName: filename + ' (' + statusLabel + ')',
+                        filamentUsedMeters: parseFloat(deltaMeters.toFixed(2)),
+                        filamentUsedGrams: parseFloat(deltaGrams.toFixed(1)),
+                        cost: parseFloat(cost.toFixed(2)),
+                        timestamp: new Date().toISOString()
+                    });
+                    saveData(data);
+                    console.log(`[Filament3D] Impressão registrada: ${filename} (${statusLabel}) - ${deltaGrams.toFixed(1)}g consumidas.`);
+                }
+            }
+
+            // Atualiza o estado salvo se o arquivo ou o estado mudou
+            if (lastState.state !== currentState || lastState.filename !== filename || lastState.filamentUsed !== filamentUsedMm) {
+                saveLastPrintState({
+                    state: currentState,
+                    filename: filename,
+                    filamentUsed: filamentUsedMm,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+    });
+}
+
+// Inicia o polling autônomo a cada 3 segundos em segundo plano
+setInterval(checkPrinterAndUpdateState, 3000);
+checkPrinterAndUpdateState();
+
 // Servidor HTTP
 const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
 
-    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -94,76 +166,18 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // API: Obter dados gerais
     if (pathname === '/api/state' && req.method === 'GET') {
         const data = loadData();
-        fetchPrinterStatus(data.settings.printerUrl, (err, printerStatus) => {
-            if (!err && printerStatus && printerStatus.print_stats) {
-                const ps = printerStatus.print_stats;
-                const lastState = loadLastPrintState();
-                const currentState = ps.state; // 'printing', 'complete', 'cancelled', 'standby'
-                const filename = ps.filename || 'Desconhecido.gcode';
-                const filamentUsedMm = ps.filament_used || 0; // em milímetros
-                const filamentUsedMeters = filamentUsedMm / 1000;
-                // Densidade média PLA ~1.24 g/cm3, diâmetro 1.75mm -> gramas = pi * (r^2) * comprimento * densidade
-                // r = 0.875 mm = 0.0875 cm
-                // volume cm3 = pi * (0.0875^2) * (comprimento_m * 100)
-                const radiusCm = 0.0875;
-                const lengthCm = filamentUsedMeters * 100;
-                const volumeCm3 = Math.PI * Math.pow(radiusCm, 2) * lengthCm;
-                const activeSpool = data.spools.find(s => s.id === data.activeSpoolId) || data.spools[0];
-                const density = activeSpool ? (activeSpool.densityGcm3 || 1.24) : 1.24;
-                const filamentUsedGrams = volumeCm3 * density;
-
-                // Debitar TODA impressão (completo, cancelado, falhou, standby, etc.)
-                if (lastState.state === 'printing' && currentState !== 'printing') {
-                    const deltaMm = Math.max(0, filamentUsedMm - (lastState.filamentUsed || 0));
-                    const deltaMeters = deltaMm / 1000;
-                    const deltaGrams = Math.PI * Math.pow(radiusCm, 2) * (deltaMeters * 100) * density;
-
-                    if (deltaGrams > 0.5 && activeSpool) {
-                        activeSpool.currentWeightGrams = Math.max(0, activeSpool.currentWeightGrams - deltaGrams);
-                        
-                        const netWeight = activeSpool.initialWeightGrams - activeSpool.emptySpoolWeightGrams;
-                        const costPerGram = netWeight > 0 ? (activeSpool.cost / netWeight) : 0;
-                        const cost = deltaGrams * costPerGram;
-
-                        let statusLabel = 'Concluído';
-                        if (currentState === 'cancelled') statusLabel = 'Cancelado';
-                        else if (currentState === 'error' || currentState === 'standby') statusLabel = 'Interrompido/Falha';
-                        else statusLabel = 'Parado (' + currentState + ')';
-
-                        data.history.unshift({
-                            id: Date.now().toString(),
-                            spoolId: activeSpool.id,
-                            printName: filename + ' (' + statusLabel + ')',
-                            filamentUsedMeters: parseFloat(deltaMeters.toFixed(2)),
-                            filamentUsedGrams: parseFloat(deltaGrams.toFixed(1)),
-                            cost: parseFloat(cost.toFixed(2)),
-                            timestamp: new Date().toISOString()
-                        });
-                        saveData(data);
-                    }
-                }                saveLastPrintState({
-                    state: currentState,
-                    filename: filename,
-                    filamentUsed: filamentUsedMm,
-                    timestamp: new Date().toISOString()
-                });
-            }
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                ...data,
-                printerConnected: !err,
-                printerStatus: printerStatus || null,
-                printerError: err ? err.message : null
-            }));
-        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            ...data,
+            printerConnected: printerConnected,
+            printerStatus: lastPrinterStatus,
+            printerError: printerError
+        }));
         return;
     }
 
-    // API: Adicionar Bobina
     if (pathname === '/api/spools' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => body += chunk);
@@ -178,7 +192,7 @@ const server = http.createServer((req, res) => {
                     color: newSpoolData.color || '#cccccc',
                     initialWeightGrams: parseFloat(newSpoolData.initialWeightGrams) || 1000,
                     emptySpoolWeightGrams: parseFloat(newSpoolData.emptySpoolWeightGrams) || 200,
-                    currentWeightGrams: parseFloat(newSpoolData.currentWeightGrams) || 1000,
+                    currentWeightGrams: parseFloat(newSpoolData.initialWeightGrams) || 1000,
                     densityGcm3: parseFloat(newSpoolData.densityGcm3) || 1.24,
                     diameterMm: parseFloat(newSpoolData.diameterMm) || 1.75,
                     cost: parseFloat(newSpoolData.cost) || 0.0,
@@ -197,7 +211,6 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // API: Definir Bobina Ativa
     if (pathname === '/api/active-spool' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => body += chunk);
@@ -223,7 +236,6 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // API: Consumir filamento (Registrar impressão ou ajuste)
     if (pathname === '/api/consume' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => body += chunk);
@@ -242,7 +254,6 @@ const server = http.createServer((req, res) => {
                 const consumedMeters = parseFloat(meters) || 0;
                 spool.currentWeightGrams = Math.max(0, spool.currentWeightGrams - consumedGrams);
 
-                // Calcular custo proporcional
                 const netWeight = spool.initialWeightGrams - spool.emptySpoolWeightGrams;
                 const costPerGram = netWeight > 0 ? (spool.cost / netWeight) : 0;
                 const cost = consumedGrams * costPerGram;
@@ -259,9 +270,8 @@ const server = http.createServer((req, res) => {
 
                 data.history.unshift(historyItem);
                 saveData(data);
-
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: true, spool, historyItem }));
+                res.end(JSON.stringify({ success: true, historyItem }));
             } catch (e) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: false, error: e.message }));
@@ -270,13 +280,17 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // API: Deletar bobina
     if (pathname.startsWith('/api/spools/') && req.method === 'DELETE') {
         const spoolId = pathname.split('/')[3];
         const data = loadData();
+        if (data.spools.length <= 1) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Você precisa ter pelo menos uma bobina cadastrada.' }));
+            return;
+        }
         data.spools = data.spools.filter(s => s.id !== spoolId);
         if (data.activeSpoolId === spoolId) {
-            data.activeSpoolId = data.spools.length > 0 ? data.spools[0].id : null;
+            data.activeSpoolId = data.spools[0].id;
         }
         saveData(data);
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -284,14 +298,12 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // Frontend HTML - aplicação funcional completa (Dashboard, Bobinas, Histórico)
     if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(getHTMLContent());
         return;
     }
 
-    // Serve arquivos estáticos CSS/JS se solicitados diretamente
     const staticPath = path.join(__dirname, pathname.slice(1));
     if (fs.existsSync(staticPath) && fs.statSync(staticPath).isFile()) {
         const ext = path.extname(staticPath).toLowerCase();
