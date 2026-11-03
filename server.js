@@ -115,29 +115,36 @@ const server = http.createServer((req, res) => {
                 const density = activeSpool ? (activeSpool.densityGcm3 || 1.24) : 1.24;
                 const filamentUsedGrams = volumeCm3 * density;
 
-                // Verificar transição de 'printing' para 'complete' ou 'cancelled'
-                if (lastState.state === 'printing' && (currentState === 'complete' || currentState === 'cancelled')) {
-                    if (filamentUsedGrams > 1 && activeSpool) {
-                        activeSpool.currentWeightGrams = Math.max(0, activeSpool.currentWeightGrams - filamentUsedGrams);
+                // Debitar TODA impressão (completo, cancelado, falhou, standby, etc.)
+                if (lastState.state === 'printing' && currentState !== 'printing') {
+                    const deltaMm = Math.max(0, filamentUsedMm - (lastState.filamentUsed || 0));
+                    const deltaMeters = deltaMm / 1000;
+                    const deltaGrams = Math.PI * Math.pow(radiusCm, 2) * (deltaMeters * 100) * density;
+
+                    if (deltaGrams > 0.5 && activeSpool) {
+                        activeSpool.currentWeightGrams = Math.max(0, activeSpool.currentWeightGrams - deltaGrams);
                         
                         const netWeight = activeSpool.initialWeightGrams - activeSpool.emptySpoolWeightGrams;
                         const costPerGram = netWeight > 0 ? (activeSpool.cost / netWeight) : 0;
-                        const cost = filamentUsedGrams * costPerGram;
+                        const cost = deltaGrams * costPerGram;
+
+                        let statusLabel = 'Concluído';
+                        if (currentState === 'cancelled') statusLabel = 'Cancelado';
+                        else if (currentState === 'error' || currentState === 'standby') statusLabel = 'Interrompido/Falha';
+                        else statusLabel = 'Parado (' + currentState + ')';
 
                         data.history.unshift({
                             id: Date.now().toString(),
                             spoolId: activeSpool.id,
-                            printName: `${filename} (${currentState === 'complete' ? 'Concluído' : 'Cancelado'})`,
-                            filamentUsedMeters: parseFloat(filamentUsedMeters.toFixed(2)),
-                            filamentUsedGrams: parseFloat(filamentUsedGrams.toFixed(1)),
+                            printName: filename + ' (' + statusLabel + ')',
+                            filamentUsedMeters: parseFloat(deltaMeters.toFixed(2)),
+                            filamentUsedGrams: parseFloat(deltaGrams.toFixed(1)),
                             cost: parseFloat(cost.toFixed(2)),
                             timestamp: new Date().toISOString()
                         });
                         saveData(data);
                     }
-                }
-
-                saveLastPrintState({
+                }                saveLastPrintState({
                     state: currentState,
                     filename: filename,
                     filamentUsed: filamentUsedMm,
