@@ -109,13 +109,30 @@ function checkPrinterAndUpdateState() {
                     filename: filename,
                     startFilamentUsed: filamentUsedMm,
                     lastFilamentUsed: filamentUsedMm,
+                    maxProgress: 0,
                     timestamp: new Date().toISOString()
                 });
                 console.log(`[Filament3D] Nova impressão iniciada: ${filename} (Filamento inicial Klipper: ${filamentUsedMm}mm)`);
                 return;
             }
 
-            // 2. Estava imprimindo e saiu de 'printing' (concluído, cancelado, erro, standby)
+            // 2. Continua imprimindo: rastreia o progresso máximo alcançado
+            if (currentState === 'printing' && lastState.state === 'printing') {
+                const vs = printerStatus.virtual_sdcard;
+                const currentProgress = (vs && vs.progress ? vs.progress * 100 : 0);
+                const maxProgress = Math.max(lastState.maxProgress || 0, currentProgress);
+                
+                if (filamentUsedMm > (lastState.lastFilamentUsed || 0) || maxProgress > (lastState.maxProgress || 0)) {
+                    saveLastPrintState({
+                        ...lastState,
+                        lastFilamentUsed: filamentUsedMm,
+                        maxProgress: maxProgress
+                    });
+                }
+                return;
+            }
+
+            // 3. Estava imprimindo e saiu de 'printing' (concluído, cancelado, erro, standby)
             if (lastState.state === 'printing' && currentState !== 'printing') {
                 // Se o Klipper resetou ou mudou, usamos o lastFilamentUsed ou filamentUsedMm final
                 const endFilamentUsed = filamentUsedMm > (lastState.startFilamentUsed || 0) ? filamentUsedMm : (lastState.lastFilamentUsed || filamentUsedMm);
@@ -123,17 +140,28 @@ function checkPrinterAndUpdateState() {
                 const deltaMeters = deltaMm / 1000;
                 const deltaGrams = Math.PI * Math.pow(radiusCm, 2) * (deltaMeters * 100) * density;
 
+                // Intelegente: se o progresso chegou a 100% (ou >= 99%), a impressão concluiu com sucesso
+                // mesmo que o Moonraker reporte estado 'cancelled' ou 'standby' após o fim
+                const maxProgress = lastState.maxProgress || 0;
+                const reached100Percent = maxProgress >= 99;
+
+                let statusLabel;
+                if (reached100Percent || currentState === 'complete') {
+                    statusLabel = 'Concluído';
+                } else if (currentState === 'cancelled') {
+                    statusLabel = 'Cancelado';
+                } else if (currentState === 'error' || currentState === 'standby') {
+                    statusLabel = 'Interrompido/Falha';
+                } else {
+                    statusLabel = 'Parado (' + currentState + ')';
+                }
+
                 if (deltaGrams > 0.3 && activeSpool) {
                     activeSpool.currentWeightGrams = Math.max(0, activeSpool.currentWeightGrams - deltaGrams);
                     
                     const netWeight = activeSpool.initialWeightGrams - activeSpool.emptySpoolWeightGrams;
                     const costPerGram = netWeight > 0 ? (activeSpool.cost / netWeight) : 0;
                     const cost = deltaGrams * costPerGram;
-
-                    let statusLabel = 'Concluído';
-                    if (currentState === 'cancelled') statusLabel = 'Cancelado';
-                    else if (currentState === 'error' || currentState === 'standby') statusLabel = 'Interrompido/Falha';
-                    else statusLabel = 'Parado (' + currentState + ')';
 
                     const printNameClean = lastState.filename || filename;
                     data.history.unshift({
@@ -155,28 +183,19 @@ function checkPrinterAndUpdateState() {
                     filename: filename,
                     startFilamentUsed: 0,
                     lastFilamentUsed: filamentUsedMm,
+                    maxProgress: 0,
                     timestamp: new Date().toISOString()
                 });
                 return;
             }
 
-            // 3. Continua imprimindo: atualiza apenas o último valor visto (caso ocorra queda de energia)
-            if (currentState === 'printing' && lastState.state === 'printing') {
-                if (filamentUsedMm > (lastState.lastFilamentUsed || 0)) {
-                    saveLastPrintState({
-                        ...lastState,
-                        lastFilamentUsed: filamentUsedMm
-                    });
-                }
-            } else {
-                // Apenas mantém atualizado o estado ocioso
-                if (lastState.state !== currentState) {
-                    saveLastPrintState({
-                        ...lastState,
-                        state: currentState,
-                        filename: filename
-                    });
-                }
+            // 4. Estado ocioso (não está imprimindo)
+            if (lastState.state !== currentState) {
+                saveLastPrintState({
+                    ...lastState,
+                    state: currentState,
+                    filename: filename
+                });
             }
         }
     });
