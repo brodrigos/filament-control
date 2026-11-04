@@ -680,10 +680,10 @@
         }
 
         // Modals
-        function openAddSpoolModal() { document.getElementById('modal-add-spool').classList.remove('hidden'); }
-        function closeAddSpoolModal() { document.getElementById('modal-add-spool').classList.add('hidden'); }
-        function openSimulateModal() { document.getElementById('modal-simulate').classList.remove('hidden'); }
-        function closeSimulateModal() { document.getElementById('modal-simulate').classList.add('hidden'); }
+        function openAddSpoolModal() { document.getElementById('modal-add-spool').removeAttribute('hidden'); }
+        function closeAddSpoolModal() { document.getElementById('modal-add-spool').setAttribute('hidden', ''); }
+        function openSimulateModal() { document.getElementById('modal-simulate').removeAttribute('hidden'); }
+        function closeSimulateModal() { document.getElementById('modal-simulate').setAttribute('hidden', ''); }
 
         document.getElementById('spool-color').addEventListener('input', e => {
             document.getElementById('spool-color-hex').value = e.target.value;
