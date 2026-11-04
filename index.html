@@ -673,6 +673,7 @@
                         <td style="color:var(--accent); font-weight:600;">+${h.filamentUsedGrams} g</td>
                         <td style="color:var(--muted); font-size:0.85rem;">${h.filamentUsedMeters} m</td>
                         <td style="color:var(--success); font-weight:600;">$${(h.cost || 0).toFixed(2)}</td>
+                        <td style="width:1%;"><button class="btn btn-text danger" onclick="deleteHistoryEntry('${h.id}')"><i class="fa-solid fa-trash"></i></button></td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -723,6 +724,13 @@
         function deleteSpool(spoolId) {
             if (!confirm('Deseja realmente excluir esta bobina?')) return;
             fetch('/api/spools/' + spoolId, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => { if (data.success) refreshData(); });
+        }
+
+        function deleteHistoryEntry(historyId) {
+            if (!confirm('Deseja realmente excluir este registro do histórico?')) return;
+            fetch('/api/history/' + historyId, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => { if (data.success) refreshData(); });
         }

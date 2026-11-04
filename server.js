@@ -352,6 +352,22 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (pathname.startsWith('/api/history/') && req.method === 'DELETE') {
+        const historyId = pathname.split('/')[3];
+        const data = loadData();
+        const historyLen = data.history.length;
+        data.history = data.history.filter(h => h.id !== historyId);
+        if (data.history.length === historyLen) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Registro não encontrado' }));
+            return;
+        }
+        saveData(data);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+        return;
+    }
+
     if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(getHTMLContent());
